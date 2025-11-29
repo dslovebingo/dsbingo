@@ -1,69 +1,107 @@
 <!DOCTYPE html>
-<!--
-	NOTES:
-	1. All tokens are represented by '$' sign in the template.
-	2. You can write your code only wherever mentioned.
-	3. All occurrences of existing tokens will be replaced by their appropriate values.
-	4. Blank lines will be removed automatically.
-	5. Remove unnecessary comments before creating your template.
--->
 <html>
 <head>
-<meta charset="UTF-8">
-<meta name="authoring-tool" content="Adobe_Animate_CC">
-<title>test</title>
-<!-- write your code here -->
-<script src="https://code.createjs.com/1.0.0/createjs.min.js"></script>
-<script src="test.js"></script>
-<script>
-var canvas, stage, exportRoot, anim_container, dom_overlay_container, fnStartAnimation;
-function init() {
-	canvas = document.getElementById("canvas");
-	anim_container = document.getElementById("animation_container");
-	dom_overlay_container = document.getElementById("dom_overlay_container");
-	var comp=AdobeAn.getComposition("ED849C51B5A2374187EEB36FF277C976");
-	var lib=comp.getLibrary();
-	var loader = new createjs.LoadQueue(false);
-	loader.addEventListener("fileload", function(evt){handleFileLoad(evt,comp)});
-	loader.addEventListener("complete", function(evt){handleComplete(evt,comp)});
-	var lib=comp.getLibrary();
-	loader.loadManifest(lib.properties.manifest);
-}
-function handleFileLoad(evt, comp) {
-	var images=comp.getImages();	
-	if (evt && (evt.item.type == "image")) { images[evt.item.id] = evt.result; }	
-}
-function handleComplete(evt,comp) {
-	//This function is always called, irrespective of the content. You can use the variable "stage" after it is created in token create_stage.
-	var lib=comp.getLibrary();
-	var ss=comp.getSpriteSheet();
-	var queue = evt.target;
-	var ssMetadata = lib.ssMetadata;
-	for(i=0; i<ssMetadata.length; i++) {
-		ss[ssMetadata[i].name] = new createjs.SpriteSheet( {"images": [queue.getResult(ssMetadata[i].name)], "frames": ssMetadata[i].frames} )
-	}
-	exportRoot = new lib.beta2_fail_reset();
-	stage = new lib.Stage(canvas);
-	stage.enableMouseOver();	
-	//Registers the "tick" event listener.
-	fnStartAnimation = function() {
-		stage.addChild(exportRoot);
-		createjs.Ticker.framerate = lib.properties.fps;
-		createjs.Ticker.addEventListener("tick", stage);
-	}	    
-	//Code to support hidpi screens and responsive scaling.
-	AdobeAn.makeResponsive(false,'both',false,1,[canvas,anim_container,dom_overlay_container]);	
-	AdobeAn.compositionLoaded(lib.properties.id);
-	fnStartAnimation();
-}
-</script>
-<!-- write your code here -->
+<meta charset="utf-8"/>
+<title>DS LoveBingo</title>
+<style>
+  body {
+    margin:0;
+    padding:0;
+    background:#fff;
+    font-family:sans-serif;
+    overflow:hidden;
+  }
+
+  /* 빙고판이 보일 영역이랑 맞춰서 위치 잡기 */
+  #loader {
+    position:absolute;
+    top:400px;   /* bingo 캔버스 시작 위치에 맞게 숫자 조절 */
+    left:200px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+
+  .loader-circle {
+    width:80px;
+    height:80px;
+    border:20px solid #ccc;
+    border-top-color:#000;
+    border-radius:50%;
+    animation:spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    100% { transform:rotate(360deg); }
+  }
+
+  /* 빙고 게임 iframe */
+  #gameFrame {
+    position:absolute;
+    top:40px;
+    left:40px;
+    width:100vw;
+    height:100vh;
+    border:none;
+    display:none;   /* 처음엔 숨겨놓음 */
+  }
+</style>
 </head>
-<body onload="init();" style="margin:0px;">
-	<div id="animation_container" style="background-color:rgba(255, 255, 255, 1.00); width:480px; height:600px">
-		<canvas id="canvas" width="480" height="600" style="position: absolute; display: block; background-color:rgba(255, 255, 255, 1.00);"></canvas>
-		<div id="dom_overlay_container" style="pointer-events:none; overflow:hidden; width:480px; height:600px; position: absolute; left: 0px; top: 0px; display: block;">
-		</div>
-	</div>
+<body>
+
+<div id="loader">
+  <div class="loader-circle"></div>
+</div>
+
+<iframe id="gameFrame" src="bingo.html"></iframe>
+
+<script>
+  // 이미 새로고침 한 적이 있는지 체크
+  const alreadyRefreshed = localStorage.getItem("bingoFirstReloadDone");
+
+  const loader = document.getElementById("loader");   // 로딩 div
+  const frame  = document.getElementById("gameFrame"); // 빙고 iframe (있으면)
+
+  // 혹시 null이어도 에러 안 나게 기본값 처리
+  if (loader) loader.style.display = "none";
+  if (frame)  frame.style.display  = "none";
+
+  if (!alreadyRefreshed) {
+    // ✅ 첫 방문일 때만: 2.5초 후 로딩 보여주고, 3초 후 새로고침
+
+    // 2.5초 후 로딩 표시
+    setTimeout(function () {
+      if (loader) loader.style.display = "flex";
+    }, 2500);
+
+    // 3초 후 새로고침 (단, 다시 안 하게 플래그 저장)
+    setTimeout(function () {
+      localStorage.setItem("bingoFirstReloadDone", "true");
+      location.reload();
+    }, 3000);
+
+  } else {
+    // ✅ 이미 새로고침 한 적 있으면: 이제부터는 새로고침 X
+    // 여기서부터는 "원래 쓰던 로딩 + 빙고 표시 로직"만 돌면 됨
+
+    if (loader) loader.style.display = "flex";
+
+    // bingo.html 로딩시키고, 다 로딩되면 로딩 숨기고 iframe 보이기
+    if (frame) {
+      frame.style.display = "none";         // 처음엔 숨기고
+      frame.addEventListener("load", function () {
+        if (loader) loader.style.display = "none";
+        frame.style.display = "block";      // 로딩 끝나면 보여주기
+      });
+
+      // iframe src가 HTML에 이미 써있으면 이 줄은 생략해도 됨
+      // frame.src = "bingo.html";
+    }
+  }
+</script>
+
+
+
+
 </body>
 </html>
